@@ -7,8 +7,8 @@
  
 // Pin 13 has an LED connected on most Arduino boards.
 // give it a name:
-#define en12 11
-#define en34 10
+#define en12 9
+#define en34 6
 #define a3 4
 #define a4 3
 #define a1 7
