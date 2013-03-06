@@ -37,7 +37,7 @@
 #define SPI_MSTR_CLK8 0x05 /* chip clock/8 */
 #define SPI_MSTR_CLK32 0x06 /* chip clock/32 */
 
-#define BUFSIZE 20
+#define BUFSIZE 10
 volatile unsigned char incoming[BUFSIZE];
 volatile short int received=0;
 
@@ -86,6 +86,7 @@ uint8_t received_from_spi(uint8_t data)
 
 ISR(SPI_STC_vect)
 {
+  // Serial.write("Interrupt\n");
   incoming[received++] = received_from_spi(0x00);
   if (received == BUFSIZE || incoming[received-1] == 0x00) {
       parse_message();
@@ -105,11 +106,17 @@ void setup(){
 }
 
 void loop(){
+ //Serial.write("loop\n");
  delay(500); 
 }
 
 void parse_message(){
-  Serial.println(received);
+  int i = 0;
+  // Serial.write("Parsing: \n");
+  for(;i < received;i++){
+    Serial.write(incoming[i]);
+  }
+  // Serial.write("\nDone Parsing;\n");
 }
 
 // send a SPI message to the other device - 3 bytes then go back into 
@@ -139,3 +146,6 @@ unsigned char SPI_SlaveReceive(){
   return SPDR;
 }
 */
+
+
+

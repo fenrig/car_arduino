@@ -76,3 +76,6 @@ uint8_t received_from_spi(uint8_t data)
   SPDR = data;
   return SPDR;
 }
+
+
+

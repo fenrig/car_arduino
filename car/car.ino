@@ -43,7 +43,7 @@ void loop() {
  */
  //left_forward();  // links - rechts
  //right_forward(); // voor  - achter
- //forward();
+ forward();
  //forward();
   delay(1000);
 }
