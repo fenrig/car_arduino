@@ -37,9 +37,17 @@
 #define SPI_MSTR_CLK8 0x05 /* chip clock/8 */
 #define SPI_MSTR_CLK32 0x06 /* chip clock/32 */
 
-#define BUFSIZE 10
+#define BUFSIZE 1
 volatile unsigned char incoming[BUFSIZE];
 volatile short int received=0;
+
+// ------ l293d
+#define en12 9
+#define en34 6
+#define a3 4
+#define a4 3
+#define a1 7
+#define a2 8
 
 void setup_spi(uint8_t mode, int dord, int interrupt, uint8_t clock)
 {
@@ -88,7 +96,7 @@ ISR(SPI_STC_vect)
 {
   // Serial.write("Interrupt\n");
   incoming[received++] = received_from_spi(0x00);
-  if (received == BUFSIZE || incoming[received-1] == 0x00) {
+  if (received == BUFSIZE || incoming[received-1] == 0x00 || incoming[received-1] == (unsigned char)255 ) {
       parse_message();
       received = 0;
    }
@@ -98,11 +106,72 @@ void spi_init(void){
   setup_spi(SPI_MODE_0, SPI_MSB, SPI_INTERRUPT,SPI_SLAVE);
 }
 
+void l293d_init(void){
+  // initialize the digital pins as an outputs.
+  pinMode(en12, OUTPUT);
+  pinMode(en34, OUTPUT);
+  pinMode(a3, OUTPUT);
+  pinMode(a4, OUTPUT);
+  pinMode(a1, OUTPUT);
+  pinMode(a2, OUTPUT); 
+}
+
+void front_side(uint8_t pwm, uint8_t A1, uint8_t A2){ // voor - achter
+  analogWrite(en12, pwm);
+  digitalWrite(a1, A1);
+  digitalWrite(a2, A2);
+}
+
+void backward(void){
+  back_side(255, HIGH, LOW);
+}
+
+void forward(void){
+  back_side(255, LOW, HIGH);
+}
+
+void back_disable(void){
+  back_side(0, LOW, LOW);
+}
+
+void back_brake(void){
+  back_side(255, LOW, LOW);
+}
+
+void back_side(uint8_t pwm, uint8_t A1, uint8_t A2){ // links - rechts
+  analogWrite(en34, pwm);
+  digitalWrite(a3, A1);
+  digitalWrite(a4, A2);
+}
+
+void right(void){
+  front_side(255, HIGH, LOW);
+}
+
+void left(void){
+  front_side(255, LOW, HIGH);
+}
+
+void front_disable(void){
+  front_side(0, LOW, LOW);
+}
+
+void front_brake(void){
+  front_side(255, LOW, LOW);
+}
+
 void setup(){
   // Begin Serial
   Serial.begin(9600);
+  // Init l293d
+  l293d_init();
   // Init SPI
   spi_init();
+  // Clear array
+  int i = 0;
+  for(i;i<BUFSIZE;i++){
+    incoming[i] = 0;
+  }
 }
 
 void loop(){
@@ -114,7 +183,27 @@ void parse_message(){
   int i = 0;
   // Serial.write("Parsing: \n");
   for(;i < received;i++){
-    Serial.write(incoming[i]);
+    Serial.println((int)incoming[i]);
+    switch(incoming[i]){
+      case ((unsigned char)1):
+        forward();
+        break;
+      case ((unsigned char)2):
+        backward();
+        break;
+      case ((unsigned char)3):
+        back_brake();
+        break;
+      case ((unsigned char)4):
+        left();
+        break;
+      case ((unsigned char)5):
+        right();
+        break;
+      case ((unsigned char)6):
+        front_brake();
+        break;
+    }
   }
   // Serial.write("\nDone Parsing;\n");
 }

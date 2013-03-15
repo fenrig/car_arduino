@@ -43,9 +43,24 @@ void loop() {
  */
  //left_forward();  // links - rechts
  //right_forward(); // voor  - achter
- forward();
  //forward();
-  delay(1000);
+ //delay(1000);
+ //backward();
+ //delay(3000);
+ forward();
+ delay(3000);
+ //back_disable();
+ left();
+ delay(3000);
+ //back_disable();
+ //delay(1000);
+ backward();
+ //delay(1000);
+ //backward();
+ //delay(1000);
+ //right();
+ //forward();
+  delay(3000);
 }
 
 void front_side(uint8_t pwm, uint8_t A1, uint8_t A2){ // voor - achter
