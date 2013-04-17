@@ -1,30 +1,3 @@
-/*
-  Blink
-  Turns on an LED on for one second, then off for one second, repeatedly.
- 
-  This example code is in the public domain.
- */
- 
-// Pin 13 has an LED connected on most Arduino boards.
-// give it a name:
-#define en12 11
-#define en34 10
-#define a3 4
-#define a4 3
-#define a1 7
-#define a2 8
-
-// the setup routine runs once when you press reset:
-void setup() {                
-  // initialize the digital pins as an outputs.
-  pinMode(en12, OUTPUT);
-  pinMode(en34, OUTPUT);
-  pinMode(a3, OUTPUT);
-  pinMode(a4, OUTPUT);
-  pinMode(a1, OUTPUT);
-  pinMode(a2, OUTPUT); 
-}
-
 #include <stdio.h>
 #include <avr/io.h>
 #include <util/delay.h>
@@ -64,17 +37,20 @@ void setup() {
 #define SPI_MSTR_CLK8 0x05 /* chip clock/8 */
 #define SPI_MSTR_CLK32 0x06 /* chip clock/32 */
 
-#define BUFSIZE 1
-volatile unsigned char incoming[BUFSIZE];
-volatile short int received=0;
+#define BUFSIZE 2
 
-// ------ l293d
-#define en12 9
-#define en34 6
+#define en12 11
+#define en34 10
 #define a3 4
 #define a4 3
 #define a1 7
 #define a2 8
+
+#define roadwith 250
+#define defaultspeed 150
+
+volatile unsigned char incomming[BUFSIZE];
+volatile short int received=0;
 
 void setup_spi(uint8_t mode, int dord, int interrupt, uint8_t clock)
 {
@@ -122,8 +98,8 @@ uint8_t received_from_spi(uint8_t data)
 ISR(SPI_STC_vect)
 {
   // Serial.write("Interrupt\n");
-  incoming[received++] = received_from_spi(0x00);
-  if (received == BUFSIZE || incoming[received-1] == 0x00 || incoming[received-1] == (unsigned char)255 ) {
+  incomming[received++] = received_from_spi(0x00);
+  if (received == BUFSIZE || incomming[received-1] == 0x00 || incomming[received-1] == (unsigned char)255 ) {
       parse_message();
       received = 0;
    }
@@ -143,29 +119,29 @@ void l293d_init(void){
   pinMode(a2, OUTPUT); 
 }
 
-void right_forward(void){
-  right_side(255, HIGH, LOW);
+void right_forward(int pwm){
+  right_side(pwm, HIGH, LOW);
 }
-void left_forward(void){
-  left_side(255, HIGH, LOW);
+void left_forward(int pwm){
+  left_side(pwm, HIGH, LOW);
 }
-void right_backward(void){
-  right_side(255, LOW, HIGH);
+void right_backward(int pwm){
+  right_side(pwm, LOW, HIGH);
 }
-void left_backward(void){
-  left_side(255, LOW, HIGH);
+void left_backward(int pwm){
+  left_side(pwm, LOW, HIGH);
 }
-void right_disable(void){
+void right_disable(int pwm){
   right_side(0, LOW, LOW);
 }
-void left_disable(void){
+void left_disable(int pwm){
   left_side(0, LOW, LOW);
 }
-void right_brake(void){
-  right_side(255, LOW, LOW);
+void right_brake(int pwm){
+  right_side(pwm, LOW, LOW);
 }
-void left_brake(void){
-  left_side(255, LOW, LOW);
+void left_brake(int pwm){
+  left_side(pwm, LOW, LOW);
 }
 
 void left_side(uint8_t pwm, uint8_t A1, uint8_t A2){
@@ -180,6 +156,20 @@ void right_side(uint8_t pwm, uint8_t A1, uint8_t A2){
   digitalWrite(a4, A2);
 }
 
+void setup() {
+  // Begin Serial
+  Serial.begin(9600);
+  // Init l293d
+  l293d_init();
+  // Init SPI
+  spi_init();
+  // Clear array
+  int i = 0;
+  for(i;i<BUFSIZE;i++){
+    incomming[i] = 0;
+  }
+}
+
 void loop(){
  //Serial.write("loop\n");
  delay(500); 
@@ -187,37 +177,79 @@ void loop(){
 
 void parse_message(){
   int i = 0;
-  // Serial.write("Parsing: \n");
-  for(;i < received;i++){
-    Serial.println((int)incoming[i]);
-    switch(incoming[i]){
-      case ((unsigned char)1):
-        right_forward();
-        left_forward();
-        break;
-      case ((unsigned char)2):
-        right_backward();
-        left_backward();
-        break;
-      case ((unsigned char)3):
-        left_brake();
-        right_brake();
-        break;
-      case ((unsigned char)4):
-        left_disable();
-        break;
-      case ((unsigned char)5):
-        right_disable();
-        break;
-      case ((unsigned char)6):
-        right_backward();
-        left_backward();
-        break;
+  int pwm = 0; //must be created in offset function
+  Serial.print("i: ");
+  Serial.println(incomming[i]);
+  Serial.print("i+1: ");
+  Serial.println(incomming[i+1]);
+
+
+  // Serial+.write("Parsing: \n");
+  for(i=0;i < received;i++){
+    int left = (int)incomming[i];
+    int right = (int)incomming[i+1];
+    if(left == 250 && right == 250) //two default offsets (250) => no road so stop
+    {
+        pwm = 255; //full breaking
+        right_brake(pwm);
+        left_brake(pwm);
+        return;
+    }
+    else if(left != 250 && right != 250) //two offsets
+    {
+        //find the smallest offset, more power on that side
+        if(left < right)
+        {
+          OffsetToPwmLeft(left);
+        }
+        else if(left > right)
+        {
+          OffsetToPwmRight(right);
+        }
+        else if(left == right)
+        {
+          left_forward(defaultspeed);
+          right_forward(defaultspeed);
+        }
+    }
+    else if(left == 250)
+    {
+      OffsetToPwmRight(right);
+    }
+    else if(right==250)
+    {
+      OffsetToPwmLeft(left);
     }
   }
   // Serial.write("\nDone Parsing;\n");
 }
 
+void OffsetToPwmLeft(int OffLeft)
+{
+ int OffRight,Offset,pwm;
+ OffRight = roadwith - OffLeft;
+ Offset = OffLeft - OffRight;
+ Offset = abs(Offset);
+ //rechter kant op init waarde brengen (150)
+ right_forward(defaultspeed);
+ //linker kant met juiste waarde verhogen
+ pwm = Offset/3;
+ left_forward(defaultspeed + pwm);
+}
+void OffsetToPwmRight(int OffRight)
+{
+ int OffLeft;
+ int Offset,pwm;
+ OffLeft = roadwith - OffRight; 
+ Offset = OffLeft - OffRight;
+ Offset = abs(Offset);
+  //OFFSET NEGATIEF => NAAR left RIJDEN
+  //Linker kant op initiele waar de plaatsen (150)
+  left_forward(defaultspeed);
+  //Rechter kant met juiste waarde laten versnellen
+  pwm = Offset/3;
+  right_forward(defaultspeed+pwm);
+}
 // send a SPI message to the other device - 3 bytes then go back into 
 // slave mode
 void send_message()
