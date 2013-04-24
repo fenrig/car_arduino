@@ -100,17 +100,12 @@ uint8_t received_from_spi(uint8_t data)
 }
  #define led 7
 ISR(SPI_STC_vect)
-{
-  digitalWrite(led, HIGH);
-  // Serial.write("Interrupt\n");
-  
+{  
   incomming[received++] = received_from_spi(0x00);
   if (received == BUFSIZE || incomming[received-1] == 0x00 || incomming[received-1] == (unsigned char)255 ) {
       parse_message();
       received = 0;
    }
-   
-   digitalWrite(led, LOW);
 }
 // -----------------
 void spi_init(void){
@@ -167,12 +162,8 @@ void right_side(uint8_t pwm, uint8_t A1, uint8_t A2){
 }
 
 void setup(void) {
-  // test
-  pinMode(led, OUTPUT);
-
-  digitalWrite(led, LOW);
   // Begin Serial
-  Serial.begin(9600);
+  //Serial.begin(9600);
   // Init l293d
   l293d_init();
   // Init SPI
