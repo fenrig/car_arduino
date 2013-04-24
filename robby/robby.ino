@@ -263,7 +263,7 @@ void OffsetToPwmRight(int OffRight)
   //Linker kant op initiele waar de plaatsen (150)
   left_forward(defaultspeed);
   //Rechter kant met juiste waarde laten versnellen
-  pwm = algoritme(Offset)
+  pwm = algoritme(Offset);
   right_forward(defaultspeed+pwm);
 }
 // send a SPI message to the other device - 3 bytes then go back into 
