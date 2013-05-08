@@ -39,14 +39,15 @@
 
 #define BUFSIZE 2
 
-#define en12 11
-#define en34 10
+#define en12 9
+#define en34 6
 #define a3 4
 #define a4 3
 #define a1 7
 #define a2 8
 
 #define roadwith 250
+//#define defaultspeed 150
 #define defaultspeed 150
 
 volatile unsigned char incomming[BUFSIZE];
@@ -145,12 +146,18 @@ void left_brake(int pwm){
 }
 
 void left_side(uint8_t pwm, uint8_t A1, uint8_t A2){
+  Serial.write("left side:\n");
+  Serial.write(pwm);
+  Serial.write("\n");
   analogWrite(en12, pwm);
   digitalWrite(a1, A1);
   digitalWrite(a2, A2);
 }
 
 void right_side(uint8_t pwm, uint8_t A1, uint8_t A2){
+  Serial.write("right side:\n");
+  Serial.write(pwm);
+  Serial.write("\n");
   analogWrite(en34, pwm);
   digitalWrite(a3, A1);
   digitalWrite(a4, A2);
