@@ -2,11 +2,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 // ---- spi
 #if (defined(__AVR_ATmega48__) || defined(_AVR_ATmega88__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__))
  #define SPI_SS_PIN PORTB2
@@ -16,37 +12,46 @@
 #else
  #error unknown processor - add to spi.h
 #endif
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 // SPI clock modes
 #define SPI_MODE_0 0x00 /* Sample (Rising) Setup (Falling) CPOL=0, CPHA=0 */
 #define SPI_MODE_1 0x01 /* Setup (Rising) Sample (Falling) CPOL=0, CPHA=1 */
 #define SPI_MODE_2 0x02 /* Sample (Falling) Setup (Rising) CPOL=1, CPHA=0 */
 #define SPI_MODE_3 0x03 /* Setup (Falling) Sample (Rising) CPOL=1, CPHA=1 */
-<<<<<<< HEAD
-
-// data direction
-#define SPI_LSB 1 /* send least significant bit (bit 0) first */
-#define SPI_MSB 0 /* send most significant bit (bit 7) first */
-
-// whether to raise interrupt when data received (SPIF bit received)
-#define SPI_NO_INTERRUPT 0
-#define SPI_INTERRUPT 1
-
-=======
  
 // data direction
 #define SPI_LSB 1 /* send least significant bit (bit 0) first */
-#define SPI_MSB 0 /* send most significant bit (bit 7) first */
+#define SPI_MSB 0 /* send most significa  {
+        pwm = 255; //full breaking
+        right_brake(pwm);
+        left_brake(pwm);
+        leftpwm = rightpwm = 255;
+    }
+    else if(left != 250 && right != 250) //two offsets
+    {
+        //find the smallest offset, more power on that side
+        if(left < right)
+        {
+          // OffsetToPwmRight(right);
+          OffsetToPwmLeft(right);
+
+        }
+        else if(left > right)
+        {
+          // OffsetToPwmLeft(left);
+          OffsetToPwmRight(left);
+        }
+        else if(left == right)
+        {
+          left_forward(defaultspeed);
+          rightpwm = defaultspeed;
+          right_forward(defaultspeed);
+          leftpwm = defaultspeed;nt bit (bit 7) first */
  
 // whether to raise interrupt when data received (SPIF bit received)
 #define SPI_NO_INTERRUPT 0
 #define SPI_INTERRUPT 1
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 // slave or master with clock diviser
 #define SPI_SLAVE 0xF0
 #define SPI_MSTR_CLK4 0x00 /* chip clock/4 */
@@ -56,42 +61,31 @@
 #define SPI_MSTR_CLK2 0x04 /* chip clock/2 */
 #define SPI_MSTR_CLK8 0x05 /* chip clock/8 */
 #define SPI_MSTR_CLK32 0x06 /* chip clock/32 */
-<<<<<<< HEAD
-
+ 
 #define BUFSIZE 2
-
-#define en12 9
+ 
+#define en12 5 // was 9
 #define en34 6
-=======
- 
-#define BUFSIZE 2
- 
-#define en12 11
-#define en34 10
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 #define a3 4
 #define a4 3
 #define a1 7
 #define a2 8
  
 #define roadwith 250
-//#define defaultspeed 150
-#define defaultspeed 135
- 
-volatile unsigned char incomming[BUFSIZE];
-volatile short int received=0;
-
-<<<<<<< HEAD
-#define roadwith 250
-//#define defaultspeed 150
 #define defaultspeed 150
 
 volatile unsigned char incomming[BUFSIZE];
 volatile short int received=0;
-=======
+
 volatile int pwm_right = 0;
 volatile int pwm_left = 0;
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
+
+// --- debugging
+String* list[25];
+boolean newoffset = true;
+int leftpwm = 0;
+int rightpwm = 0;
+// -------------
 
 void setup_spi(uint8_t mode, int dord, int interrupt, uint8_t clock)
 {
@@ -117,46 +111,27 @@ void setup_spi(uint8_t mode, int dord, int interrupt, uint8_t clock)
     | ((clock & 0x01) << SPR0); // cpu clock divisor SPR0
   SPSR = (((clock & 0x04) == 4) << SPI2X); // clock divisor SPI2X
 }
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 void disable_spi()
 {
   SPCR = 0;
 }
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 uint8_t send_spi(uint8_t out)
 {
   SPDR = out;
   while (!(SPSR & (1<<SPIF)));
   return SPDR;
 }
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 uint8_t received_from_spi(uint8_t data)
 {
   SPDR = data;
   return SPDR;
 }
-<<<<<<< HEAD
-
-ISR(SPI_STC_vect)
-{
-  // Serial.write("Interrupt\n");
-=======
  #define led 7
 ISR(SPI_STC_vect)
 {  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
   incomming[received++] = received_from_spi(0x00);
   if (received == BUFSIZE || incomming[received-1] == 0x00 || incomming[received-1] == (unsigned char)255 ) {
       parse_message();
@@ -167,11 +142,7 @@ ISR(SPI_STC_vect)
 void spi_init(void){
   setup_spi(SPI_MODE_0, SPI_MSB, SPI_INTERRUPT,SPI_SLAVE);
 }
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 void l293d_init(void){
   // initialize the digital pins as an outputs.
   pinMode(en12, OUTPUT);
@@ -181,11 +152,7 @@ void l293d_init(void){
   pinMode(a1, OUTPUT);
   pinMode(a2, OUTPUT); 
 }
-<<<<<<< HEAD
-
-=======
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 void right_forward(int pwm){
   right_side(pwm, HIGH, LOW);
 }
@@ -206,21 +173,6 @@ void left_disable(int pwm){
 }
 void right_brake(int pwm){
   right_side(pwm, LOW, LOW);
-<<<<<<< HEAD
-}
-void left_brake(int pwm){
-  left_side(pwm, LOW, LOW);
-}
-
-void left_side(uint8_t pwm, uint8_t A1, uint8_t A2){
-  Serial.write("left side:\n");
-  Serial.write(pwm);
-  Serial.write("\n");
-  analogWrite(en12, pwm);
-  digitalWrite(a1, A1);
-  digitalWrite(a2, A2);
-=======
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 }
 void left_brake(int pwm){
   left_side(pwm, LOW, LOW);
@@ -234,27 +186,15 @@ void left_side(uint8_t pwm, uint8_t A1, uint8_t A2){
 }
  
 void right_side(uint8_t pwm, uint8_t A1, uint8_t A2){
-<<<<<<< HEAD
-  Serial.write("right side:\n");
-  Serial.write(pwm);
-  Serial.write("\n");
-=======
   pwm_right = pwm;
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
   analogWrite(en34, pwm);
   digitalWrite(a3, A1);
   digitalWrite(a4, A2);
 }
 
-<<<<<<< HEAD
-void setup() {
-  // Begin Serial
-  Serial.begin(9600);
-=======
 void setup(void) {
   // Begin Serial
-  //Serial.begin(9600);
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
+  Serial.begin(9600);
   // Init l293d
   l293d_init();
   // Init SPI
@@ -264,29 +204,9 @@ void setup(void) {
   for(i;i<BUFSIZE;i++){
     incomming[i] = 0;
   }
-<<<<<<< HEAD
-}
-
-void loop(){
- //Serial.write("loop\n");
- delay(500); 
-}
-
-void parse_message(){
-  int i = 0;
-  int pwm = 0; //must be created in offset function
-  Serial.print("i: ");
-  Serial.println(incomming[i]);
-  Serial.print("i+1: ");
-  Serial.println(incomming[i+1]);
-
-
-  // Serial+.write("Parsing: \n");
-  for(i=0;i < received;i++){
-    int left = (int)incomming[i];
-    int right = (int)incomming[i+1];
-=======
-  
+  for(int i = 0; i < 25; i++){
+    list[i] = NULL;
+  }
 }
  
 void loop(){
@@ -298,6 +218,13 @@ void loop(){
  Serial.print("Left side: ");
  Serial.print(pwm_left);
  Serial.println(" ");*/
+ if(newoffset){
+  String* ptr = new String("Offset: ");
+  *ptr = *ptr + incomming[0] + " - " + incomming[1] + " -> " + String(leftpwm) + " - " + String(rightpwm);
+  Serial.println(*ptr);
+  delete(ptr);
+  newoffset = false;
+ }
  delay(500);
 }
  
@@ -313,29 +240,34 @@ void parse_message(){
   // Serial+.write("Parsing: \n");
     int left = (int)incomming[0];
     int right = (int)incomming[1];
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
     if(left == 250 && right == 250) //two default offsets (250) => no road so stop
     {
         pwm = 255; //full breaking
         right_brake(pwm);
         left_brake(pwm);
-        return;
+        leftpwm = rightpwm = 255;
     }
     else if(left != 250 && right != 250) //two offsets
     {
         //find the smallest offset, more power on that side
         if(left < right)
         {
-          OffsetToPwmLeft(left);
+          OffsetToPwmRight(right);
+          //OffsetToPwmLeft(right);
+
         }
         else if(left > right)
         {
-          OffsetToPwmRight(right);
+          
+          OffsetToPwmLeft(left);
+          // OffsetToPwmRight(left);
         }
         else if(left == right)
         {
           left_forward(defaultspeed);
+          rightpwm = defaultspeed;
           right_forward(defaultspeed);
+          leftpwm = defaultspeed;
         }
     }
     else if(left == 250)
@@ -346,21 +278,21 @@ void parse_message(){
     {
       OffsetToPwmLeft(left);
     }
-<<<<<<< HEAD
-  }
-  // Serial.write("\nDone Parsing;\n");
-}
-
-=======
+    newoffset = true;
   // Serial.write("\nDone Parsing;\n");
 }
 
 int algoritme(int offset){
   /* Hier bewerkingen doen in verband met lijnvolg algoritme */
-  return offset/3;
+  if(offset < 5)
+    return 0;
+  //if(offset > 20)
+  //  return (offset / 2);
+  if(offset > 25)
+    return (offset / 3);
+  return (int) ((float) offset / 2);
 }
  
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
 void OffsetToPwmLeft(int OffLeft)
 {
  int OffRight,Offset,pwm;
@@ -370,12 +302,10 @@ void OffsetToPwmLeft(int OffLeft)
  //rechter kant op init waarde brengen (150)
  right_forward(defaultspeed);
  //linker kant met juiste waarde verhogen
-<<<<<<< HEAD
- pwm = Offset/3;
-=======
  pwm = algoritme(Offset);
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
  left_forward(defaultspeed + pwm);
+ leftpwm = defaultspeed + pwm;
+ rightpwm = defaultspeed;
 }
 void OffsetToPwmRight(int OffRight)
 {
@@ -388,24 +318,10 @@ void OffsetToPwmRight(int OffRight)
   //Linker kant op initiele waar de plaatsen (150)
   left_forward(defaultspeed);
   //Rechter kant met juiste waarde laten versnellen
-<<<<<<< HEAD
-  pwm = Offset/3;
-  right_forward(defaultspeed+pwm);
-}
-// send a SPI message to the other device - 3 bytes then go back into 
-// slave mode
-void send_message()
-{
-  setup_spi(SPI_MODE_1, SPI_MSB, SPI_NO_INTERRUPT, SPI_MSTR_CLK8);
-  if (SPCR & (1<<MSTR)) { // if we are still in master mode
-    send_spi(0x02);
-    send_spi(0x00);
-  }
-  setup_spi(SPI_MODE_1, SPI_MSB, SPI_INTERRUPT, SPI_SLAVE);
-=======
   pwm = algoritme(Offset);
   right_forward(defaultspeed+pwm);
->>>>>>> 9d335db5e49b057893b2b95f38dfc7631c0a3810
+  rightpwm = defaultspeed + pwm;
+  leftpwm = defaultspeed;
 }
 // send a SPI message to the other device - 3 bytes then go back into 
 // slave mode
