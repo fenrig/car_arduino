@@ -252,14 +252,15 @@ void parse_message(){
         //find the smallest offset, more power on that side
         if(left < right)
         {
-          OffsetToPwmRight(right);
+          // OffsetToPwmRight(right);
           //OffsetToPwmLeft(right);
+          aansturing(left, right);
 
         }
         else if(left > right)
         {
-          
-          OffsetToPwmLeft(left);
+          aansturing(left, right);
+          // OffsetToPwmLeft(left);
           // OffsetToPwmRight(left);
         }
         else if(left == right)
@@ -272,11 +273,13 @@ void parse_message(){
     }
     else if(left == 250)
     {
-      OffsetToPwmRight(right);
+      //OffsetToPwmRight(right);
+      aansturing(left, right);
     }
     else if(right==250)
     {
-      OffsetToPwmLeft(left);
+      //OffsetToPwmLeft(left);
+      aansturing(left, right);
     }
     newoffset = true;
   // Serial.write("\nDone Parsing;\n");
@@ -285,12 +288,14 @@ void parse_message(){
 int algoritme(int offset){
   /* Hier bewerkingen doen in verband met lijnvolg algoritme */
   if(offset < 5)
-    return 0;
+    return 1;
   //if(offset > 20)
   //  return (offset / 2);
+  /*
   if(offset > 25)
     return (offset / 3);
-  return (int) ((float) offset / 2);
+  */
+  return (offset / 2);
 }
  
 void OffsetToPwmLeft(int OffLeft)
@@ -299,6 +304,7 @@ void OffsetToPwmLeft(int OffLeft)
  OffRight = roadwith - OffLeft;
  Offset = OffLeft - OffRight;
  Offset = abs(Offset);
+ /*
  //rechter kant op init waarde brengen (150)
  right_forward(defaultspeed);
  //linker kant met juiste waarde verhogen
@@ -306,6 +312,8 @@ void OffsetToPwmLeft(int OffLeft)
  left_forward(defaultspeed + pwm);
  leftpwm = defaultspeed + pwm;
  rightpwm = defaultspeed;
+ */
+ aansturing(OffLeft, OffRight);
 }
 void OffsetToPwmRight(int OffRight)
 {
@@ -314,6 +322,7 @@ void OffsetToPwmRight(int OffRight)
  OffLeft = roadwith - OffRight; 
  Offset = OffLeft - OffRight;
  Offset = abs(Offset);
+ /*
   //OFFSET NEGATIEF => NAAR left RIJDEN
   //Linker kant op initiele waar de plaatsen (150)
   left_forward(defaultspeed);
@@ -322,6 +331,8 @@ void OffsetToPwmRight(int OffRight)
   right_forward(defaultspeed+pwm);
   rightpwm = defaultspeed + pwm;
   leftpwm = defaultspeed;
+  */
+  aansturing(OffLeft, OffRight);
 }
 // send a SPI message to the other device - 3 bytes then go back into 
 // slave mode
@@ -333,4 +344,26 @@ void send_message()
     send_spi(0x00);
   }
   setup_spi(SPI_MODE_1, SPI_MSB, SPI_INTERRUPT, SPI_SLAVE);
+}
+
+void aansturing(int OffLeft, int OffRight){
+  int overschot = 0;
+  if(OffLeft < 126){
+    overschot = 125 - OffLeft;
+    OffLeft = OffLeft + overschot;
+    OffRight = OffRight + overschot;
+  }
+  if(OffRight < 126){
+    overschot = 125 - OffRight;
+    OffLeft = OffLeft + overschot;
+    OffRight = OffRight + overschot;
+  }
+  if(OffRight == 250) OffRight = 125;
+  if(OffLeft == 250) OffLeft = 125;
+  if(OffRight > 175) OffRight = 175;
+  if(OffLeft > 175) OffLeft = 175;
+  left_forward(OffRight);
+  right_forward(OffLeft);
+  leftpwm = OffRight;
+  rightpwm = OffLeft;
 }
