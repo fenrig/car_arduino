@@ -74,6 +74,10 @@
 #define roadwith 250
 #define defaultspeed 150
 
+#define IRPORT 5
+int val = 0;
+float voltage = 0;
+
 volatile unsigned char incomming[BUFSIZE];
 volatile short int received=0;
 
@@ -81,8 +85,11 @@ volatile int pwm_right = 0;
 volatile int pwm_left = 0;
 
 // --- debugging
-String* list[25];
-boolean newoffset = true;
+#define logger true
+#if (defined(logger))
+  boolean newoffset = true;
+#endif
+boolean globalstop = false;
 int leftpwm = 0;
 int rightpwm = 0;
 // -------------
@@ -129,7 +136,7 @@ uint8_t received_from_spi(uint8_t data)
   SPDR = data;
   return SPDR;
 }
- #define led 7
+
 ISR(SPI_STC_vect)
 {  
   incomming[received++] = received_from_spi(0x00);
@@ -194,7 +201,9 @@ void right_side(uint8_t pwm, uint8_t A1, uint8_t A2){
 
 void setup(void) {
   // Begin Serial
-  Serial.begin(9600);
+  #if (defined(logger))
+    Serial.begin(9600);
+  #endif
   // Init l293d
   l293d_init();
   // Init SPI
@@ -203,9 +212,6 @@ void setup(void) {
   int i = 0;
   for(i;i<BUFSIZE;i++){
     incomming[i] = 0;
-  }
-  for(int i = 0; i < 25; i++){
-    list[i] = NULL;
   }
 }
  
@@ -218,14 +224,29 @@ void loop(){
  Serial.print("Left side: ");
  Serial.print(pwm_left);
  Serial.println(" ");*/
- if(newoffset){
-  String* ptr = new String("Offset: ");
-  *ptr = *ptr + incomming[0] + " - " + incomming[1] + " -> " + String(leftpwm) + " - " + String(rightpwm);
-  Serial.println(*ptr);
-  delete(ptr);
-  newoffset = false;
+ #if (defined(logger))
+   if(newoffset){
+    String* ptr = new String("Offset: ");
+    *ptr = *ptr + incomming[0] + " - " + incomming[1] + " -> " + String(leftpwm) + " - " + String(rightpwm);
+    Serial.println(*ptr);
+    delete(ptr);
+    newoffset = false;
+   }
+ #endif
+ val = analogRead(IRPORT);    // read the input pin
+ voltage = val * (5.0 / 1023.0); // convert to voltage
+ #if (defined(IRLOGGER))
+    Serial.println(voltage); 
+ #endif
+ if(voltage > 2.0){
+  globalstop = true;
+  Serial.println("Stopped, close object found");
+  right_brake(255);
+  left_brake(255);
+  leftpwm = rightpwm = 255;
+ }else{
+  globalstop = false;
  }
- delay(500);
 }
  
 void parse_message(){
@@ -240,11 +261,11 @@ void parse_message(){
   // Serial+.write("Parsing: \n");
     int left = (int)incomming[0];
     int right = (int)incomming[1];
-    if(left == 250 && right == 250) //two default offsets (250) => no road so stop
+    if(left )
+    if(left == 250 && right == 250 || globalstop) //two default offsets (250) => no road so stop
     {
-        pwm = 255; //full breaking
-        right_brake(pwm);
-        left_brake(pwm);
+        right_brake(255);
+        left_brake(255);
         leftpwm = rightpwm = 255;
     }
     else if(left != 250 && right != 250) //two offsets
@@ -281,7 +302,9 @@ void parse_message(){
       //OffsetToPwmLeft(left);
       aansturing(left, right);
     }
-    newoffset = true;
+    #if (defined(logger))
+      newoffset = true;
+    #endif
   // Serial.write("\nDone Parsing;\n");
 }
 
@@ -297,7 +320,8 @@ int algoritme(int offset){
   */
   return (offset / 2);
 }
- 
+
+
 void OffsetToPwmLeft(int OffLeft)
 {
  int OffRight,Offset,pwm;
@@ -348,14 +372,17 @@ void send_message()
 
 void aansturing(int OffLeft, int OffRight){
   int overschot = 0;
+  
   if(OffLeft < 126){
     overschot = 125 - OffLeft;
     OffLeft = OffLeft + overschot;
-    OffRight = OffRight + overschot;
+    if(OffRight != 250)
+      OffRight = OffRight + overschot;
   }
   if(OffRight < 126){
     overschot = 125 - OffRight;
-    OffLeft = OffLeft + overschot;
+    if(OffLeft != 250)
+      OffLeft = OffLeft + overschot;
     OffRight = OffRight + overschot;
   }
   if(OffRight == 250) OffRight = 125;
