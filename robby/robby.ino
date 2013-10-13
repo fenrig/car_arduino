@@ -21,32 +21,7 @@
  
 // data direction
 #define SPI_LSB 1 /* send least significant bit (bit 0) first */
-#define SPI_MSB 0 /* send most significa  {
-        pwm = 255; //full breaking
-        right_brake(pwm);
-        left_brake(pwm);
-        leftpwm = rightpwm = 255;
-    }
-    else if(left != 250 && right != 250) //two offsets
-    {
-        //find the smallest offset, more power on that side
-        if(left < right)
-        {
-          // OffsetToPwmRight(right);
-          OffsetToPwmLeft(right);
-
-        }
-        else if(left > right)
-        {
-          // OffsetToPwmLeft(left);
-          OffsetToPwmRight(left);
-        }
-        else if(left == right)
-        {
-          left_forward(defaultspeed);
-          rightpwm = defaultspeed;
-          right_forward(defaultspeed);
-          leftpwm = defaultspeed;nt bit (bit 7) first */
+#define SPI_MSB 0 /* send most significant bit (bit 7) first */
  
 // whether to raise interrupt when data received (SPIF bit received)
 #define SPI_NO_INTERRUPT 0
