@@ -53,6 +53,8 @@
 int val = 0;
 float voltage = 0;
 
+#define logger 1
+
 volatile unsigned char incomming[BUFSIZE];
 volatile short int received=0;
 
@@ -68,6 +70,38 @@ boolean globalstop = false;
 int leftpwm = 0;
 int rightpwm = 0;
 // -------------
+void pwm_init(void){
+	/*
+	// Non inverting-mode
+	TCCR0A |= (1 << COM0A1);
+	//TCCR0B |= (1 << COM0B1);
+	// Set fast PWM-mode
+	TCCR0A |= (1 << WGM01) | (1 << WGM00);
+	TCCR0B |= (1 << CS01);
+	*/
+      DDRD |= (1 << DD5);
+      DDRD |= (1 << DD6);
+      TCCR0A |= (1 << WGM01) | (1 << WGM00);
+      OCR0A = 0;
+      OCR0B = 0;
+      TCCR0A |= (1 << COM0A1);
+      TCCR0A |= (1 << COM0B1);
+      TCCR0B = (1 << 2) | (0 << 1) | (1 << 0); 
+      
+	return;
+}
+
+void pwm_write(char pin, char duty_cycle){
+	// set PWM duty cycle
+	if(pin == 5){
+		OCR0A = duty_cycle;
+	}else if(pin == 6){
+		OCR0B = duty_cycle;
+	}else{
+		return;
+	}
+	
+}
 
 void setup_spi(uint8_t mode, int dord, int interrupt, uint8_t clock)
 {
@@ -162,14 +196,16 @@ void left_brake(int pwm){
  
 void left_side(uint8_t pwm, uint8_t A1, uint8_t A2){
   pwm_left = pwm;
-  analogWrite(en12, pwm);
+  //analogWrite(en12, pwm);
+  pwm_write(en12, pwm);
   digitalWrite(a1, A1);
   digitalWrite(a2, A2);
 }
  
 void right_side(uint8_t pwm, uint8_t A1, uint8_t A2){
   pwm_right = pwm;
-  analogWrite(en34, pwm);
+  //analogWrite(en34, pwm);
+  pwm_write(en34, pwm);
   digitalWrite(a3, A1);
   digitalWrite(a4, A2);
 }
@@ -179,6 +215,10 @@ void setup(void) {
   #if (defined(logger))
     Serial.begin(9600);
   #endif
+  // Init PWM
+  Serial.print(TCCR0B);
+  pwm_init();
+  Serial.print(TCCR0B);
   // Init l293d
   l293d_init();
   // Init SPI
@@ -191,6 +231,8 @@ void setup(void) {
 }
  
 void loop(){
+  int i = 0;
+  for(i = 5; i < 255; i--) i += 19;
  //Serial.write("loop\n");
  /*
  Serial.print("Right side: ");
@@ -199,6 +241,7 @@ void loop(){
  Serial.print("Left side: ");
  Serial.print(pwm_left);
  Serial.println(" ");*/
+ /*
  #if (defined(logger))
    if(newoffset){
     String* ptr = new String("Offset: ");
@@ -222,6 +265,7 @@ void loop(){
  }else{
   globalstop = false;
  }
+ */
 }
  
 void parse_message(){
@@ -237,7 +281,7 @@ void parse_message(){
     int left = (int)incomming[0];
     int right = (int)incomming[1];
     if(left )
-    if(left == 250 && right == 250 || globalstop) //two default offsets (250) => no road so stop
+    if(/*left == 250 && right == 250 ||*/ globalstop) //two default offsets (250) => no road so stop
     {
         right_brake(255);
         left_brake(255);
@@ -335,8 +379,7 @@ void OffsetToPwmRight(int OffRight)
 }
 // send a SPI message to the other device - 3 bytes then go back into 
 // slave mode
-void send_message()
-{
+void send_message(){
   setup_spi(SPI_MODE_1, SPI_MSB, SPI_NO_INTERRUPT, SPI_MSTR_CLK8);
   if (SPCR & (1<<MSTR)) { // if we are still in master mode
     send_spi(0x02);
